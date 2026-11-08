@@ -618,6 +618,14 @@ sheet.addEventListener('close', () => {
   sheet.style.background = ''; sheet.style.padding = '';
 });
 
+/* Zoomen sperren: iOS ignoriert user-scalable=no, deshalb zusätzlich die Gesten abfangen */
+['gesturestart', 'gesturechange', 'gestureend'].forEach((type) => {
+  document.addEventListener(type, (e) => e.preventDefault(), { passive: false });
+});
+document.addEventListener('touchmove', (e) => {
+  if (e.touches.length > 1 || (e.scale && e.scale !== 1)) e.preventDefault();
+}, { passive: false });
+
 applyPrefs();
 save();
 render();

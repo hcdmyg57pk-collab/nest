@@ -10,7 +10,7 @@ html[data-theme="nacht"] {
   --bg: #1F1A17; --card: #2C2521; --soft: #3A302A; --text: #F5E9DC; --muted: #C9B8A8;
   --accent: #F0A77F; --on-accent: #2A1A10; --green: #3E4A35; --line: #4A3E36;
 }
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; background: var(--bg); color: var(--text); line-height: 1.4;
