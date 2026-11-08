@@ -248,7 +248,8 @@ function settings() {
     <p class="muted">Alle Daten bleiben nur auf diesem iPhone. Eine Sicherung schützt sie, falls die App gelöscht wird.</p>
     <button class="btn alt" data-act="export">Sicherung erstellen</button>
     <button class="btn alt" data-act="import">Sicherung laden</button>
-    <button class="btn quiet" data-act="close">Schließen</button>`);
+    <button class="btn quiet" data-act="close">Schließen</button>
+    <p class="muted" style="text-align:center">Version 4</p>`);
 }
 async function exportData() {
   const name = `nest-sicherung-${dateKey()}.json`;
@@ -426,7 +427,7 @@ document.addEventListener('visibilitychange', () => {
 /* ---------- Aktionen ---------- */
 const val = (id) => document.getElementById(id).value;
 const actions = {
-  tab({ tab: t }) { tab = t; closeSheet(); render(); scrollTo(0, 0); },
+  tab({ tab: t }) { tab = t; closeSheet(); render(); main.scrollTop = 0; },
   settings,
   close: closeSheet,
   item({ id }) { itemSheet(id); },
@@ -619,15 +620,41 @@ sheet.addEventListener('close', () => {
 });
 
 /* Zoomen sperren: iOS ignoriert user-scalable=no, deshalb zusätzlich die Gesten abfangen */
+const blockOpts = { passive: false, capture: true };
 ['gesturestart', 'gesturechange', 'gestureend'].forEach((type) => {
-  document.addEventListener(type, (e) => e.preventDefault(), { passive: false });
+  window.addEventListener(type, (e) => e.preventDefault(), blockOpts);
 });
-document.addEventListener('touchmove', (e) => {
-  if (e.touches.length > 1 || (e.scale && e.scale !== 1)) e.preventDefault();
-}, { passive: false });
+['touchstart', 'touchmove'].forEach((type) => {
+  window.addEventListener(type, (e) => {
+    if (e.touches.length > 1 || (e.scale && e.scale !== 1)) e.preventDefault();
+  }, blockOpts);
+});
+let lastTouchEnd = 0;
+window.addEventListener('touchend', (e) => {
+  const now = Date.now();
+  if (now - lastTouchEnd < 350 && !e.target.closest('button, input, textarea, select, label')) e.preventDefault();
+  lastTouchEnd = now;
+}, blockOpts);
+
+/* Falls iOS trotzdem gezoomt hat: sofort zurück auf normale Größe */
+const viewportMeta = document.querySelector('meta[name=viewport]');
+const viewportBase = viewportMeta.content;
+function resetZoom() {
+  const scale = window.visualViewport?.scale ?? 1;
+  if (Math.abs(scale - 1) < 0.01) return;
+  viewportMeta.content = 'width=device-width, initial-scale=1.0001, viewport-fit=cover';
+  requestAnimationFrame(() => { viewportMeta.content = viewportBase; });
+}
+window.visualViewport?.addEventListener('resize', resetZoom);
+window.visualViewport?.addEventListener('scroll', resetZoom);
+window.addEventListener('pageshow', resetZoom);
 
 applyPrefs();
 save();
 render();
 if (S.run) runnerSheet();
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator) {
+  const hadWorker = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadWorker) location.reload(); });
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
