@@ -1,5 +1,6 @@
 'use strict';
 const KEY = 'nest.v1';
+const APP_VERSION = '5';
 const uid = () => Math.random().toString(36).slice(2, 9);
 const h = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const lines = (s) => s.split('\n').map((x) => x.trim()).filter(Boolean);
@@ -249,7 +250,7 @@ function settings() {
     <button class="btn alt" data-act="export">Sicherung erstellen</button>
     <button class="btn alt" data-act="import">Sicherung laden</button>
     <button class="btn quiet" data-act="close">Schließen</button>
-    <p class="muted" style="text-align:center">Version 4</p>`);
+    <p class="muted" style="text-align:center">Version ${APP_VERSION}</p>`);
 }
 async function exportData() {
   const name = `nest-sicherung-${dateKey()}.json`;
@@ -652,7 +653,11 @@ window.addEventListener('pageshow', resetZoom);
 applyPrefs();
 save();
 render();
-if (S.run) runnerSheet();
+document.getElementById('splashVersion').textContent = `Version ${APP_VERSION}`;
+setTimeout(() => {
+  document.getElementById('splash').remove();
+  if (S.run) runnerSheet();
+}, S.prefs.motion === 'off' ? 1250 : 1450);
 if ('serviceWorker' in navigator) {
   const hadWorker = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadWorker) location.reload(); });

@@ -12,8 +12,27 @@
   <link rel="apple-touch-icon" href="icon-180.png">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="style.css">
+  <script>
+    try {
+      const prefs = JSON.parse(localStorage.getItem('nest.v1')).prefs;
+      document.documentElement.dataset.theme = prefs.theme;
+      document.documentElement.dataset.motion = prefs.motion;
+    } catch (e) { /* Standardfarben */ }
+  </script>
 </head>
 <body>
+  <div id="splash" role="img" aria-label="Nest wird gestartet">
+    <svg class="splash-logo" viewBox="0 0 100 100" aria-hidden="true">
+      <circle cx="50" cy="50" r="48" fill="var(--soft)"/>
+      <ellipse cx="50" cy="43" rx="19" ry="25" fill="#FFFAF2"/>
+      <path d="M16 52 A34 27 0 0 0 84 52 Z" fill="var(--accent)"/>
+    </svg>
+    <div class="splash-foot">
+      <div class="splash-from">from</div>
+      <div class="splash-name">Bert</div>
+      <div id="splashVersion" class="splash-version"></div>
+    </div>
+  </div>
   <header class="top">
     <h1 id="title">Heute</h1>
     <button class="round" data-act="settings" aria-label="Einstellungen">⚙︎</button>

@@ -96,6 +96,17 @@ textarea { min-height: 110px; }
 .orb.grow { transform: scale(1.15); }
 html[data-motion="off"] .orb { transition: none; transform: none; }
 html[data-motion="off"] * { scroll-behavior: auto; }
+#splash {
+  position: fixed; inset: 0; z-index: 1000; background: var(--bg); display: grid; place-items: center;
+  animation: splashOut .25s ease 1.2s forwards;
+}
+html[data-motion="off"] #splash { animation-duration: .01s; }
+@keyframes splashOut { to { opacity: 0; visibility: hidden; } }
+.splash-logo { width: 104px; height: 104px; }
+.splash-foot { position: absolute; left: 0; right: 0; bottom: calc(28px + env(safe-area-inset-bottom)); text-align: center; }
+.splash-from { font-size: .95rem; color: var(--muted); }
+.splash-name { font-size: 1.35rem; font-weight: 700; color: var(--accent); }
+.splash-version { font-size: .75rem; color: var(--muted); margin-top: 6px; }
 .line { display: grid; grid-template-columns: 58px 1fr auto; gap: 8px; padding: 10px 2px; border-bottom: 1px solid var(--line); }
 .opt { display: grid; grid-template-columns: 1fr 84px; gap: 8px; margin-bottom: 8px; }
 .mini { width: 44px; height: 44px; flex: none; border-radius: 12px; background: var(--soft); }
