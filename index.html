@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Nest</title>
+  <meta name="theme-color" content="#FFF6EA">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Nest">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <h1 id="title">Heute</h1>
+    <button class="round" data-act="settings" aria-label="Einstellungen">⚙︎</button>
+  </header>
+  <main id="main"></main>
+  <nav class="tabs" aria-label="Bereiche">
+    <button data-act="tab" data-tab="heute"><span>🌤️</span>Heute</button>
+    <button data-act="tab" data-tab="energie"><span>🔋</span>Energie</button>
+    <button data-act="tab" data-tab="ruhe"><span>🫧</span>Ruhe</button>
+    <button data-act="tab" data-tab="sagen"><span>💬</span>Sagen</button>
+  </nav>
+  <dialog id="sheet"></dialog>
+  <input id="importFile" type="file" accept="application/json,.json" hidden>
+  <script src="app.js"></script>
+</body>
+</html>
