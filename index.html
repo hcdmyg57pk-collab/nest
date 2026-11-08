@@ -39,11 +39,12 @@
   </header>
   <main id="main"></main>
   <nav class="tabs" aria-label="Bereiche">
-    <button data-act="tab" data-tab="heute"><span>🌤️</span>Heute</button>
-    <button data-act="tab" data-tab="zeit"><span>⏳</span>Zeit</button>
-    <button data-act="tab" data-tab="energie"><span>🔋</span>Energie</button>
-    <button data-act="tab" data-tab="ruhe"><span>🫧</span>Ruhe</button>
-    <button data-act="tab" data-tab="sagen"><span>💬</span>Sagen</button>
+    <span id="tabPill" aria-hidden="true"></span>
+    <button data-act="tab" data-tab="heute"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/></svg>Heute</button>
+    <button data-act="tab" data-tab="zeit"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5.2l3.4 2"/></svg>Zeit</button>
+    <button data-act="tab" data-tab="energie"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="7" width="17" height="10" rx="3"/><path d="M22 10.5v3M11.8 9l-2.3 3.2h3l-2.3 3"/></svg>Energie</button>
+    <button data-act="tab" data-tab="ruhe"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>Ruhe</button>
+    <button data-act="tab" data-tab="sagen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5c-5 0-9 3.4-9 7.7 0 2.4 1.3 4.6 3.3 6-.2 1.3-.9 2.5-1.8 3.3 1.9-.1 3.7-.8 5-1.9.8.2 1.6.3 2.5.3 5 0 9-3.4 9-7.7s-4-7.7-9-7.7z"/></svg>Sagen</button>
   </nav>
   <dialog id="sheet"></dialog>
   <input id="importFile" type="file" accept="application/json,.json" hidden>

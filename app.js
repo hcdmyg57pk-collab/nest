@@ -1,6 +1,6 @@
 'use strict';
 const KEY = 'nest.v1';
-const APP_VERSION = '5';
+const APP_VERSION = '6';
 const uid = () => Math.random().toString(36).slice(2, 9);
 const h = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const lines = (s) => s.split('\n').map((x) => x.trim()).filter(Boolean);
@@ -172,9 +172,31 @@ function tip(d) {
 }
 
 const titles = { heute: 'Heute', zeit: 'Zeit', energie: 'Energie', ruhe: 'Ruhe', sagen: 'Sagen' };
+const tabOrder = ['heute', 'zeit', 'energie', 'ruhe', 'sagen'];
+const motionOK = () => S.prefs.motion !== 'off' && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+function animateTab(fromTab) {
+  const from = tabOrder.indexOf(fromTab);
+  const to = tabOrder.indexOf(tab);
+  if (from === to || !motionOK()) return;
+  const x = (n) => `translateX(${n * 100}%)`;
+  const dir = Math.sign(to - from);
+  document.getElementById('tabPill').animate([
+    { transform: `${x(from)} scale(1, 1)` },
+    { transform: `${x((from + to) / 2)} scale(1.22, .88)`, offset: 0.45 },
+    { transform: `${x(to + dir * 0.05)} scale(.97, 1.04)`, offset: 0.78 },
+    { transform: `${x(to)} scale(1, 1)` },
+  ], { duration: 440, easing: 'ease-out' });
+  document.querySelector(`.tabs [data-tab="${tab}"] svg`).animate([
+    { transform: 'scale(1)' }, { transform: 'scale(.8)', offset: 0.3 }, { transform: 'scale(1.14)', offset: 0.7 }, { transform: 'scale(1)' },
+  ], { duration: 360, easing: 'ease-out' });
+  main.animate([
+    { opacity: 0, transform: `translateX(${dir * 10}px)` }, { opacity: 1, transform: 'none' },
+  ], { duration: 220, easing: 'ease-out' });
+}
 function render() {
   document.getElementById('title').textContent = titles[tab];
   main.innerHTML = views[tab]();
+  document.getElementById('tabPill').style.transform = `translateX(${tabOrder.indexOf(tab) * 100}%)`;
   document.querySelectorAll('.tabs button').forEach((b) => {
     if (b.dataset.tab === tab) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
   });
@@ -428,7 +450,7 @@ document.addEventListener('visibilitychange', () => {
 /* ---------- Aktionen ---------- */
 const val = (id) => document.getElementById(id).value;
 const actions = {
-  tab({ tab: t }) { tab = t; closeSheet(); render(); main.scrollTop = 0; },
+  tab({ tab: t }) { const before = tab; tab = t; closeSheet(); render(); main.scrollTop = 0; animateTab(before); },
   settings,
   close: closeSheet,
   item({ id }) { itemSheet(id); },
