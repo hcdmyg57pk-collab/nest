@@ -1,4 +1,4 @@
-const CACHE = 'nest-8';
+const CACHE = 'nest-9';
 const FILES = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png'];
 
 self.addEventListener('install', (e) => {

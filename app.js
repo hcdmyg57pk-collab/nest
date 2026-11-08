@@ -1,6 +1,6 @@
 'use strict';
 const KEY = 'nest.v1';
-const APP_VERSION = '8';
+const APP_VERSION = '9';
 const uid = () => Math.random().toString(36).slice(2, 9);
 const h = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const lines = (s) => s.split('\n').map((x) => x.trim()).filter(Boolean);
@@ -559,8 +559,8 @@ function tick() {
   if (left <= 0 && !r.rang) { r.rang = true; save(); beep(); }
   const time = document.getElementById('rTime');
   if (!time) return;
-  time.textContent = left > 60000 ? `noch ${Math.ceil(left / 60000)} Min`
-    : left > 0 ? 'unter 1 Min' : 'Zeit ist um';
+  const secs = Math.ceil(left / 1000);
+  time.textContent = secs > 0 ? `noch ${Math.floor(secs / 60)}:${pad(secs % 60)} Min` : 'Zeit ist um';
   document.getElementById('rBar').style.width = `${Math.max(0, Math.min(1, r.stepLen ? left / r.stepLen : 0)) * 100}%`;
   const later = r.steps.slice(r.i + 1).reduce((a, s) => a + s.min, 0);
   const finish = now + Math.max(0, left) + later * 60000;

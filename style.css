@@ -141,6 +141,7 @@ html[data-motion="off"] #splash { animation-duration: .01s; }
 .line { display: grid; grid-template-columns: 58px 1fr auto; gap: 8px; padding: 10px 2px; border-bottom: 1px solid var(--line); }
 .opt { display: grid; grid-template-columns: 1fr 84px; gap: 8px; margin-bottom: 8px; }
 .mini { width: 44px; height: 44px; flex: none; border-radius: 12px; background: var(--soft); }
+#rTime { font-variant-numeric: tabular-nums; }
 .track { height: 18px; border-radius: 9px; background: var(--soft); overflow: hidden; margin: 22px 0 14px; }
 .fillbar { height: 100%; width: 100%; background: var(--accent); border-radius: 9px; }
 input[type=number] { width: 100%; min-height: 48px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); font-size: 16px; }
