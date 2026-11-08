@@ -108,7 +108,10 @@ dialog {
   max-height: 90dvh; overflow-y: auto;
 }
 dialog::backdrop { background: rgba(40, 25, 15, .28); }
-dialog.full { margin: 0; width: 100vw; max-width: none; height: 100dvh; max-height: none; border-radius: 0; display: flex; flex-direction: column; background: var(--bg); }
+dialog:not([open]) { display: none !important; }
+dialog.full { margin: 0; width: 100vw; max-width: none; height: 100dvh; max-height: none; border-radius: 0; flex-direction: column; background: var(--bg); padding-top: calc(20px + env(safe-area-inset-top)); }
+dialog.full[open] { display: flex; }
+dialog.full .btn { flex: none; }
 dialog h2 { margin-top: 0; font-size: 1.4rem; }
 .step { display: flex; gap: 12px; align-items: center; width: 100%; min-height: 50px; text-align: left; border-bottom: 1px solid var(--line); }
 .box { width: 26px; height: 26px; flex: none; border-radius: 9px; border: 2px solid var(--accent); display: grid; place-items: center; font-size: .9rem; }

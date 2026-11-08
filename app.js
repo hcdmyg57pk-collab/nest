@@ -1,6 +1,6 @@
 'use strict';
 const KEY = 'nest.v1';
-const APP_VERSION = '6';
+const APP_VERSION = '7';
 const uid = () => Math.random().toString(36).slice(2, 9);
 const h = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const lines = (s) => s.split('\n').map((x) => x.trim()).filter(Boolean);
@@ -49,7 +49,7 @@ const defaults = () => ({
   ],
   run: null,
   days: {},
-  prefs: { theme: 'warm', size: 100, motion: 'on', sound: 'off' },
+  prefs: { theme: 'warm', size: 100, motion: 'on', sound: 'off', noiseVol: 30 },
 });
 
 function load() {
@@ -84,7 +84,9 @@ const main = document.getElementById('main');
 const sheet = document.getElementById('sheet');
 function openSheet(html, full = false) {
   sheet.className = full ? 'full' : '';
+  sheet.style.background = ''; sheet.style.padding = '';
   sheet.innerHTML = html;
+  sheet.scrollTop = 0;
   if (!sheet.open) sheet.showModal();
 }
 function closeSheet() { if (sheet.open) sheet.close(); }
@@ -141,7 +143,7 @@ const views = {
         <button class="tile" data-act="ground" data-i="0"><span>🌱</span>5-4-3-2-1</button>
         <button class="tile" data-act="dark"><span>🌑</span>Dunkler Bildschirm</button>
       </div>
-      ${on ? `<label for="vol">Lautstärke</label><input id="vol" type="range" min="0" max="100" value="${Math.round(audio.gain.gain.value * 100)}">` : ''}
+      ${on ? `<label for="vol">Lautstärke</label><input id="vol" type="range" min="0" max="100" value="${S.prefs.noiseVol}">` : ''}
       <p class="muted" style="margin-top:10px">Rauschen braucht ein iPhone, das nicht auf lautlos steht.</p>
       <h2>Was mir hilft</h2>${helps}
       <button class="btn alt" data-act="helpsForm">Liste ändern</button>`;
@@ -240,6 +242,7 @@ function runBreath(inhale) {
   text.textContent = inhale ? 'Einatmen' : 'Ausatmen';
   breathTimer = setTimeout(() => runBreath(!inhale), inhale ? 4000 : 6000);
 }
+const noiseGain = () => 0.25 * (S.prefs.noiseVol / 100);
 function toggleNoise() {
   if (audio) { audio.ctx.close(); audio = null; return; }
   const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -252,7 +255,9 @@ function toggleNoise() {
   }
   const source = ctx.createBufferSource();
   source.buffer = buffer; source.loop = true;
-  const gain = ctx.createGain(); gain.gain.value = 0.4;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0, ctx.currentTime);
+  gain.gain.linearRampToValueAtTime(noiseGain(), ctx.currentTime + 1.5); // sanft einblenden
   source.connect(gain).connect(ctx.destination);
   source.start();
   audio = { ctx, gain };
@@ -606,7 +611,12 @@ document.addEventListener('click', (e) => {
   if (el) actions[el.dataset.act](el.dataset);
 });
 document.addEventListener('input', (e) => {
-  if (e.target.id === 'vol' && audio) audio.gain.gain.value = e.target.value / 100;
+  if (e.target.id === 'vol' && audio) {
+    S.prefs.noiseVol = +e.target.value; save();
+    const param = audio.gain.gain; const t = audio.ctx.currentTime;
+    param.cancelScheduledValues(t);
+    param.setTargetAtTime(noiseGain(), t, 0.05);
+  }
 });
 document.addEventListener('change', (e) => {
   const field = e.target.dataset?.planf;
@@ -639,6 +649,9 @@ document.getElementById('importFile').addEventListener('change', async (e) => {
 });
 sheet.addEventListener('close', () => {
   stopBreath();
+  if (sheet.open) return; // inzwischen wurde schon das nächste Fenster geöffnet
+  sheet.className = '';
+  sheet.innerHTML = '';
   sheet.style.background = ''; sheet.style.padding = '';
 });
 
