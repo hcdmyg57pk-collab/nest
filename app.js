@@ -1,6 +1,6 @@
 'use strict';
 const KEY = 'nest.v1';
-const APP_VERSION = '7';
+const APP_VERSION = '8';
 const uid = () => Math.random().toString(36).slice(2, 9);
 const h = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const lines = (s) => s.split('\n').map((x) => x.trim()).filter(Boolean);
@@ -9,12 +9,11 @@ const dateKey = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}
 
 const defaults = () => ({
   items: [
-    { id: uid(), time: '08:00', emoji: '☕️', title: 'Aufstehen & Frühstück', steps: ['Etwas trinken', 'Frühstücken', 'Medikamente, falls nötig'] },
-    { id: uid(), time: '09:00', emoji: '🧺', title: 'Fertig machen', steps: ['Zähne putzen', 'Anziehen', 'Tasche packen'] },
     { id: uid(), time: '13:00', emoji: '🍲', title: 'Mittagessen', steps: [] },
     { id: uid(), time: '15:00', emoji: '🛋️', title: 'Pause ohne Reize', steps: ['Handy leise stellen', '20 Minuten ausruhen'] },
-    { id: uid(), time: '21:30', emoji: '🌙', title: 'Abendroutine', steps: ['Zähne putzen', 'Morgen kurz anschauen', 'Licht dimmen'] },
   ],
+  stats: {},
+  events: [],
   care: ['Gegessen', 'Getrunken', 'Pause gemacht', 'Draußen gewesen', 'Etwas Schönes'],
   helps: ['Kopfhörer aufsetzen', 'Licht ausmachen', 'Schwere Decke', 'Raum verlassen'],
   cards: [
@@ -95,12 +94,12 @@ function closeSheet() { if (sheet.open) sheet.close(); }
 const views = {
   heute() {
     const d = day();
-    const items = [...S.items].sort((a, b) => a.time.localeCompare(b.time));
+    const items = todayEntries();
     const open = items.filter((i) => !d.done[i.id] && !d.skip[i.id]);
     const [now, next] = open;
     const date = new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
     const hero = now
-      ? `<button class="card hero" style="width:100%;text-align:left" data-act="item" data-id="${now.id}">
+      ? `<button class="card hero" style="width:100%;text-align:left" data-act="${now.act}" data-id="${now.id}">
            <div class="label">Jetzt</div><div class="big">${h(now.emoji)} ${h(now.title)}</div>
            ${next ? `<div class="muted">Danach: ${h(next.emoji)} ${h(next.title)}</div>` : '<div class="muted">Danach ist nichts mehr geplant.</div>'}
          </button>`
@@ -108,9 +107,9 @@ const views = {
     const rows = items.map((i) => {
       const cls = d.done[i.id] ? 'done' : d.skip[i.id] ? 'skip' : '';
       const mark = d.done[i.id] ? '✓' : d.skip[i.id] ? 'heute nicht' : '';
-      return `<button class="row ${cls}" data-act="item" data-id="${i.id}">
+      return `<button class="row ${cls}" data-act="${i.act}" data-id="${i.id}">
         <span class="emoji">${h(i.emoji)}</span>
-        <span class="grow"><b>${h(i.title)}</b><br><span class="muted">${h(i.time)}</span></span>
+        <span class="grow"><b>${h(i.title)}</b><br><span class="muted">${h(i.sub)}</span></span>
         <span class="muted">${mark}</span></button>`;
     }).join('');
     return `${runBanner()}<p class="muted">${h(date)}</p>${hero}<h2>Mein Tag</h2>${rows}
@@ -132,7 +131,8 @@ const views = {
         <div class="ends"><span>ruhig</span><span>zu viel</span></div></div>
       ${tip(d)}
       <h2>Heute schon</h2><div class="chips">${chips}</div>
-      <h2>Energie der letzten 7 Tage</h2><div class="card"><div class="week">${bars}</div></div>`;
+      <h2>Energie der letzten 7 Tage</h2><div class="card"><div class="week">${bars}</div></div>
+      <h2>Was mir auffällt</h2>${insightsHtml()}`;
   },
   ruhe() {
     const on = !!audio;
@@ -157,8 +157,14 @@ const views = {
         <div><span class="muted">Anfangen:</span> <b>${fmt(c.start)}</b></div>
         <div><span class="muted">${endLabel}:</span> <b>${fmt(c.end)}</b></div></button>`;
     }).join('');
-    return `${runBanner()}<p class="muted">Antippen, um Zeiten und Varianten zu wählen.</p>${cards}
-      <button class="btn alt" data-act="planNew">+ Neuer Ablauf</button>`;
+    const today = dateKey();
+    const events = S.events.filter((e) => e.date >= today).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))
+      .map((e) => `<button class="row" data-act="event" data-id="${e.id}"><span class="emoji">📍</span>
+        <span class="grow"><b>${h(e.title)}</b><br><span class="muted">${h(dateLabel(e.date))}, ${h(e.time)} Uhr</span></span></button>`).join('');
+    return `${runBanner()}<h2 style="margin-top:4px">Abläufe</h2>${cards}
+      <button class="btn alt" data-act="planNew">+ Neuer Ablauf</button>
+      <h2>Termine</h2>${events || '<p class="muted">Noch keine Termine geplant.</p>'}
+      <button class="btn alt" data-act="eventForm">+ Neuer Termin</button>`;
   },
   sagen() {
     const cards = S.cards.map((c) => `<button class="row" data-act="card" data-id="${c.id}"><span class="grow">${h(c.text.split('\n')[0])}</span></button>`).join('');
@@ -312,6 +318,115 @@ function nearestTs(endMin) {
   if (t < now - 6 * 3600000) t += 86400000; else if (t > now + 18 * 3600000) t -= 86400000;
   return t;
 }
+/* Heute: Einträge, Abläufe und Termine in einer Liste */
+function todayEntries() {
+  const today = dateKey();
+  const entries = S.items.map((i) => ({ id: i.id, time: i.time, emoji: i.emoji, title: i.title, act: 'item', sub: i.time }));
+  S.plans.filter((p) => p.today !== 'no' && p.steps.some((s) => stepMin(s) > 0)).forEach((p) => {
+    const c = calc(p);
+    entries.push({ id: p.id, time: fmt(c.start), emoji: p.emoji, title: p.name, act: 'plan', sub: `${fmt(c.start)} bis ${fmt(c.end)}` });
+  });
+  S.events.filter((e) => e.date === today).forEach((e) => {
+    const leave = fmt(toMin(e.time) - e.travel);
+    entries.push({ id: e.id, time: leave, emoji: '📍', title: e.title, act: 'event', sub: e.travel ? `Losgehen ${leave}, Termin ${e.time}` : `Termin ${e.time}` });
+  });
+  const order = (t) => (t < '04:00' ? `x${t}` : t); // nach Mitternacht gehört noch zum Abend
+  return entries.sort((a, b) => order(a.time).localeCompare(order(b.time)));
+}
+
+/* Der Timer lernt, wie lange Schritte wirklich dauern */
+const median = (list) => { const s = [...list].sort((a, b) => a - b); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+function recordStep() {
+  const r = S.run; const s = r.steps[r.i];
+  if (!s.sid || !r.stepStart) return;
+  const min = (Date.now() - r.stepStart) / 60000;
+  if (min < 1 || min < s.min * 0.3 || min > s.min * 3 + 10) return; // durchgetippt oder vergessen
+  const key = `${s.sid}:${s.opt}`;
+  S.stats[key] = [...(S.stats[key] || []), Math.round(min * 10) / 10].slice(-5);
+}
+function suggestions(p) {
+  const out = [];
+  p.steps.forEach((s) => s.options.forEach((o, n) => {
+    const list = S.stats[`${s.id}:${n}`];
+    if (!list || list.length < 3) return;
+    const real = Math.max(1, Math.round(median(list)));
+    if (Math.abs(real - o.min) >= 3 && Math.abs(real - o.min) >= o.min * 0.15) {
+      out.push({ sid: s.id, n, real, min: o.min, name: s.options.length > 1 ? `${s.title} (${o.label})` : s.title });
+    }
+  }));
+  return out;
+}
+function clearStats(sid) { Object.keys(S.stats).filter((k) => k.startsWith(`${sid}:`)).forEach((k) => delete S.stats[k]); }
+
+/* Termine vorbereiten */
+const dateLabel = (k) => {
+  if (k === dateKey()) return 'Heute';
+  const t = new Date(); t.setDate(t.getDate() + 1);
+  if (k === dateKey(t)) return 'Morgen';
+  return new Date(`${k}T12:00`).toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
+};
+const eventById = (id) => S.events.find((e) => e.id === id);
+function eventSheet(id) {
+  const e = eventById(id);
+  if (!e) return closeSheet();
+  const d = day();
+  const bring = e.bring.map((b, n) => `<button class="step" data-act="evBring" data-id="${id}" data-n="${n}" aria-pressed="${!!e.got[b]}"><span class="box">${e.got[b] ? '✓' : ''}</span>${h(b)}</button>`).join('');
+  const isToday = e.date === dateKey();
+  openSheet(`<h2>📍 ${h(e.title)}</h2>
+    <div class="card hero"><div class="label">${h(dateLabel(e.date))}</div><div class="big">${h(e.time)} Uhr</div>
+      ${e.travel ? `<div class="muted">Losgehen um ${fmt(toMin(e.time) - e.travel)} (${dur(e.travel)} Weg)</div>` : ''}
+      ${e.place ? `<div class="muted">${h(e.place)}</div>` : ''}</div>
+    ${e.what ? `<label>Was dort passiert</label><p style="white-space:pre-line">${h(e.what)}</p>` : ''}
+    ${bring ? `<label>Mitnehmen</label>${bring}` : ''}
+    ${e.say ? `<button class="btn alt" data-act="eventSay" data-id="${id}">Was ich sagen kann</button>` : ''}
+    ${isToday ? `<button class="btn alt" data-act="mark" data-kind="done" data-id="${id}">${d.done[id] ? 'Doch nicht erledigt' : 'Erledigt'}</button>` : ''}
+    <button class="btn quiet" data-act="eventForm" data-id="${id}">Ändern</button>
+    <button class="btn quiet" data-act="close">Schließen</button>`);
+}
+function eventForm(id) {
+  const e = eventById(id) || { title: '', date: dateKey(), time: '12:00', place: '', travel: 0, what: '', bring: [], say: '' };
+  openSheet(`<h2>${id ? 'Termin ändern' : 'Neuer Termin'}</h2>
+    <label for="e-title">Name</label><input id="e-title" type="text" value="${h(e.title)}">
+    <label for="e-date">Datum</label><input id="e-date" type="date" value="${h(e.date)}">
+    <label for="e-time">Uhrzeit</label><input id="e-time" type="time" value="${h(e.time)}">
+    <label for="e-place">Ort</label><input id="e-place" type="text" value="${h(e.place)}">
+    <label for="e-travel">Weg dorthin (Minuten)</label><input id="e-travel" type="number" inputmode="numeric" min="0" max="600" value="${e.travel}">
+    <label for="e-what">Was dort passiert</label><textarea id="e-what" placeholder="Wer ist da? Was läuft ab? Wie lange dauert es?">${h(e.what)}</textarea>
+    <label for="e-bring">Mitnehmen (eins pro Zeile)</label><textarea id="e-bring">${h(e.bring.join('\n'))}</textarea>
+    <label for="e-say">Was ich sagen kann</label><textarea id="e-say" placeholder="Guten Tag, ich habe um … einen Termin.">${h(e.say)}</textarea>
+    <button class="btn" data-act="eventSave" data-id="${id || ''}">Speichern</button>
+    ${id ? `<button class="btn quiet" data-act="eventDelete" data-id="${id}">Löschen</button>` : ''}
+    <button class="btn quiet" data-act="close">Abbrechen</button>`);
+}
+
+/* Muster: nur beschreiben, nie bewerten */
+const INSIGHT_DAYS = 14;
+function insightsHtml() {
+  const keys = Object.keys(S.days).sort().filter((k) => S.days[k].energy);
+  if (keys.length < INSIGHT_DAYS) {
+    return `<div class="card"><p>Noch ${INSIGHT_DAYS - keys.length} Tage mit Energie-Angabe, dann zeigt Nest hier erste Muster.</p></div>`;
+  }
+  const next = (k) => { const x = new Date(`${k}T12:00`); x.setDate(x.getDate() + 1); return S.days[dateKey(x)]?.energy; };
+  const avg = (a) => a.reduce((s, x) => s + x, 0) / a.length;
+  const num = (x) => x.toFixed(1).replace('.', ',');
+  const compare = (test, value, text) => {
+    const yes = []; const no = [];
+    keys.forEach((k) => { const v = value(k); if (v) (test(k) ? yes : no).push(v); });
+    if (yes.length < 4 || no.length < 4) return null;
+    const diff = avg(yes) - avg(no);
+    return Math.abs(diff) < 0.8 ? null : { diff: Math.abs(diff), text: text(num(avg(yes)), num(avg(no))) };
+  };
+  const found = [];
+  S.care.forEach((c) => {
+    found.push(compare((k) => S.days[k].care[c], (k) => S.days[k].energy, (a, b) => `An Tagen mit „${c}“ lag deine Energie im Schnitt bei ${a}, sonst bei ${b}.`));
+    found.push(compare((k) => S.days[k].care[c], next, (a, b) => `Am Tag nach „${c}“ lag deine Energie bei ${a}, sonst bei ${b}.`));
+  });
+  found.push(compare((k) => S.days[k].reize >= 4, next, (a, b) => `Nach Tagen mit vielen Reizen lag deine Energie bei ${a}, sonst bei ${b}.`));
+  const top = found.filter(Boolean).sort((a, b) => b.diff - a.diff).slice(0, 3);
+  if (!top.length) return '<div class="card"><p>Bisher zeigt sich kein deutliches Muster.</p></div>';
+  return `${top.map((t) => `<div class="card"><p>${h(t.text)}</p></div>`).join('')}<p class="muted">Das sind nur Hinweise aus deinen Angaben, kein Beweis.</p>`;
+}
+
 function planCalcHtml(p) {
   const c = calc(p);
   let cur = c.start;
@@ -345,10 +460,15 @@ function planSheet(id) {
     : `<label for="pf-target">Fertig sein um</label><input id="pf-target" type="time" data-planf="target" data-id="${id}" value="${h(p.target)}">`;
   const variants = p.steps.filter((s) => s.options.length > 1).map((s) => `<label>${h(s.title)}</label><div class="chips">${s.options.map((o, n) =>
     `<button class="chip" data-act="opt" data-id="${id}" data-s="${s.id}" data-o="${n}" aria-pressed="${(s.choice || 0) === n}">${h(o.label)} · ${o.min} Min</button>`).join('')}</div>`).join('');
-  openSheet(`<h2>${h(p.emoji)} ${h(p.name)}</h2>${goal}${variants}
+  const d = day();
+  const learned = suggestions(p).map((x) => `<div class="card hero"><p><b>${h(x.name)}</b> dauert bei dir meist ${x.real} statt ${x.min} Minuten.</p>
+    <button class="btn" data-act="learnApply" data-id="${id}" data-s="${x.sid}" data-n="${x.n}" data-real="${x.real}">Übernehmen</button>
+    <button class="btn quiet" data-act="learnSkip" data-id="${id}" data-s="${x.sid}">Nicht jetzt</button></div>`).join('');
+  openSheet(`<h2>${h(p.emoji)} ${h(p.name)}</h2>${learned}${goal}${variants}
     <label for="pf-buffer">Puffer</label>${select('buffer', [0, 5, 10, 15, 20, 30], 'Min')}
     <div id="planCalc" style="margin-top:16px">${planCalcHtml(p)}</div>
     <button class="btn" data-act="runStart" data-id="${id}">Jetzt starten</button>
+    <button class="btn alt" data-act="mark" data-kind="skip" data-id="${id}">${d.skip[id] ? 'Heute doch machen' : 'Heute auslassen'}</button>
     <button class="btn alt" data-act="planEdit" data-id="${id}">Ablauf ändern</button>
     <button class="btn quiet" data-act="close">Schließen</button>`);
 }
@@ -365,6 +485,9 @@ function planEdit(id) {
     <label for="pf-mode">Berechnen nach</label><select id="pf-mode" data-planf="mode" data-id="${id}">
       <option value="ziel" ${p.mode === 'ziel' ? 'selected' : ''}>Uhrzeit, zu der ich fertig sein will</option>
       <option value="schlaf" ${p.mode === 'schlaf' ? 'selected' : ''}>Aufstehzeit und Schlafdauer</option></select>
+    <label for="pf-today">In „Heute“ anzeigen</label><select id="pf-today" data-planf="today" data-id="${id}">
+      <option value="yes" ${p.today !== 'no' ? 'selected' : ''}>Ja</option>
+      <option value="no" ${p.today === 'no' ? 'selected' : ''}>Nein</option></select>
     <h2 style="margin-top:22px;font-size:1.15rem">Schritte</h2>${rows}
     <button class="btn alt" data-act="stepForm" data-id="${id}">+ Schritt hinzufügen</button>
     <button class="btn" data-act="plan" data-id="${id}">Fertig</button>
@@ -406,7 +529,7 @@ function runBanner() {
 }
 function startStep(i) {
   const m = S.run.steps[i].min * 60000;
-  S.run.i = i; S.run.stepLen = m; S.run.stepEnd = Date.now() + m; S.run.rang = false;
+  S.run.i = i; S.run.stepStart = Date.now(); S.run.stepLen = m; S.run.stepEnd = Date.now() + m; S.run.rang = false;
   save();
 }
 function runnerSheet() {
@@ -558,7 +681,7 @@ const actions = {
     if (!options.length) return document.getElementById('s-m0').focus();
     const p = planById(id);
     const old = p.steps.find((x) => x.id === s);
-    if (old) { old.title = title; old.options = options; old.choice = Math.min(old.choice || 0, options.length - 1); }
+    if (old) { clearStats(s); old.title = title; old.options = options; old.choice = Math.min(old.choice || 0, options.length - 1); }
     else p.steps.push({ id: uid(), title, choice: 0, options });
     save(); render(); planEdit(id);
   },
@@ -578,18 +701,57 @@ const actions = {
     const p = planById(id);
     const steps = p.steps.filter((s) => stepMin(s) > 0).map((s) => {
       const o = s.options[Math.min(s.choice || 0, s.options.length - 1)];
-      return { title: s.options.length > 1 ? `${s.title}: ${o.label}` : s.title, min: o.min };
+      return { title: s.options.length > 1 ? `${s.title}: ${o.label}` : s.title, min: o.min, sid: s.id, opt: s.options.indexOf(o) };
     });
     if (!steps.length) return alert('Dieser Ablauf hat noch keine Schritte.');
-    S.run = { name: p.name, emoji: p.emoji, steps, target: nearestTs(calc(p).end), i: 0 };
+    S.run = { planId: id, name: p.name, emoji: p.emoji, steps, target: nearestTs(calc(p).end), i: 0 };
     startStep(0); primeBeep(); keepAwake(); render(); runnerSheet();
   },
   runOpen() { primeBeep(); keepAwake(); runnerSheet(); },
   runNext() {
     primeBeep();
+    recordStep();
     if (S.run.i + 1 < S.run.steps.length) { startStep(S.run.i + 1); return runnerSheet(); }
+    const { planId } = S.run;
+    if (planId) { const d = day(); d.done[planId] = true; d.skip[planId] = false; }
     S.run = null; save(); releaseAwake(); render();
-    openSheet('<div class="fill"><div class="say">Geschafft 🌿</div></div><button class="btn" data-act="close">Schließen</button>', true);
+    const p = planById(planId);
+    const hint = p && suggestions(p).length ? '<p class="muted">Nest hat neue Zeitvorschläge für diesen Ablauf.</p>' : '';
+    openSheet(`<div class="fill"><div><div class="say">Geschafft 🌿</div>${hint}</div></div><button class="btn" data-act="close">Schließen</button>`, true);
+  },
+  learnApply({ id, s, n, real }) {
+    planById(id).steps.find((x) => x.id === s).options[+n].min = +real;
+    clearStats(s); save(); planSheet(id); render();
+  },
+  learnSkip({ id, s }) { clearStats(s); save(); planSheet(id); },
+  event({ id }) { eventSheet(id); },
+  eventForm({ id }) { eventForm(id); },
+  eventSave({ id }) {
+    const title = val('e-title').trim();
+    if (!title) return document.getElementById('e-title').focus();
+    const data = {
+      title, date: val('e-date') || dateKey(), time: val('e-time') || '12:00', place: val('e-place').trim(),
+      travel: Math.max(0, Math.min(600, Math.round(+val('e-travel')) || 0)),
+      what: val('e-what').trim(), bring: lines(val('e-bring')), say: val('e-say').trim(),
+    };
+    if (id) Object.assign(eventById(id), data);
+    else S.events.push({ id: uid(), got: {}, ...data });
+    save(); render();
+    if (id) eventSheet(id); else closeSheet();
+  },
+  eventDelete({ id }) {
+    if (!confirm('Diesen Termin löschen?')) return;
+    S.events = S.events.filter((e) => e.id !== id);
+    save(); closeSheet(); render();
+  },
+  evBring({ id, n }) {
+    const e = eventById(id); const b = e.bring[+n];
+    e.got[b] = !e.got[b]; save(); eventSheet(id);
+  },
+  eventSay({ id }) {
+    const e = eventById(id);
+    openSheet(`<div class="fill"><div class="say long">${h(e.say)}</div></div>
+      <button class="btn alt" data-act="event" data-id="${id}">Zurück</button>`, true);
   },
   runMore() {
     const r = S.run; const now = Date.now();

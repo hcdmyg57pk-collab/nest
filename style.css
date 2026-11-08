@@ -117,7 +117,8 @@ dialog h2 { margin-top: 0; font-size: 1.4rem; }
 .box { width: 26px; height: 26px; flex: none; border-radius: 9px; border: 2px solid var(--accent); display: grid; place-items: center; font-size: .9rem; }
 .step[aria-pressed="true"] .box { background: var(--accent); color: var(--on-accent); }
 label { display: block; margin: 12px 0 4px; font-weight: 600; }
-input[type=text], input[type=time], textarea, select { width: 100%; min-height: 48px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); font-size: 16px; }
+input[type=date], input[type=time] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; }
+input[type=text], input[type=time], input[type=date], textarea, select { width: 100%; min-height: 48px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); font-size: 16px; }
 textarea { min-height: 110px; }
 .fill { flex: 1; display: grid; place-items: center; text-align: center; overflow-y: auto; }
 .say { font-size: clamp(2rem, 9vw, 3.4rem); font-weight: 700; line-height: 1.2; white-space: pre-line; }
